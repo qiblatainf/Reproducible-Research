@@ -1,0 +1,96 @@
+---
+title: "PA1_template"
+output:
+  html_document: default
+  'html_document: keep_md: true': default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This is the course project 1 for Reproducible Research course.
+
+### Data
+
+The data represents the information recorded by 'personal activity monitoring device' of an individual.
+
+### Loading and preprocessing the data
+```{r}
+data <- read.csv("C:/Users/qib/Desktop/R Programming/repdata_data_activity/activity.csv")
+summary(data)
+names(data)
+```
+
+### What is mean total number of steps taken per day?
+```{r}
+stepsperday <- aggregate(steps ~ date, data, sum)
+stepsperday
+hist(stepsperday$steps, xlab = "Total Number of Steps per Day", ylab = "Number of Days", main = "Steps taken each day")
+meanspd <- mean(stepsperday$steps)
+meanspd
+medianspd <- median(stepsperday$steps)
+medianspd
+```
+Mean of total steps taken per day: 10766.19
+Median of total steps taken per day: 10765
+
+### What is the average daily activity pattern?
+```{r}
+averagedap <- aggregate(steps ~ interval, data, mean, na.rm = TRUE)
+plot(steps ~ interval, averagedap, type="l")
+intervalWithmaxsteps <- averagedap[which.max(averagedap$steps),]$interval
+intervalWithmaxsteps
+```
+The 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps: 835
+### Imputing missing values
+```{r}
+totalmissingvalues <- sum(is.na(data$steps))
+totalmissingvalues
+
+meanstepsperinterval <- function(interval){
+  averagedap[averagedap$interval==interval,]$steps
+}
+meanstepsperinterval
+
+datawithnoNA <- data
+for(i in 1:nrow(datawithnoNA)){
+  if(is.na(datawithnoNA[i,]$steps)){
+    datawithnoNA[i,]$steps <- meanstepsperinterval(datawithnoNA[i,]$interval)
+  }
+}
+
+totalspdwithnoNA <- aggregate(steps ~ date, datawithnoNA, sum)
+hist(totalspdwithnoNA$steps, xlab = "steps", ylab = "days", main = "Total Steps per Day with no NA")
+meanstepsperdayNoNA <- mean(totalspdwithnoNA$steps)
+meanstepsperdayNoNA
+medianstepsperdayNoNA <- median(totalspdwithnoNA$steps)
+medianstepsperdayNoNA
+
+
+```
+Total number of missing values: 2304
+The mean did not change with/without 'NA'. However, the median changed i.e. increased.
+
+
+### Are there differences in activity patterns between weekdays and weekends?
+```{r}
+datawithnoNA$date <- as.Date(strptime(datawithnoNA$date, format="%Y-%m-%d"))
+datawithnoNA$day <- weekdays(datawithnoNA$date)
+for (i in 1:nrow(datawithnoNA)) {
+  if (datawithnoNA[i,]$day %in% c("Saturday","Sunday")) {
+    datawithnoNA[i,]$day<-"weekend"
+  }
+  else{
+    datawithnoNA[i,]$day<-"weekday"
+  }
+}
+stepsbyday <- aggregate(datawithnoNA$steps ~ datawithnoNA$interval + datawithnoNA$day, datawithnoNA, mean)
+
+names(stepsbyday) <- c("interval", "day", "steps")
+library(lattice)
+xyplot(steps ~ interval | day, stepsbyday, type = "l", layout = c(1, 2), 
+       xlab = "Interval", ylab = "Number of steps")
+```
